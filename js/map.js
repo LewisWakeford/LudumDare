@@ -200,27 +200,27 @@ Map.prototype.buildAIGrid = function()
 			var roomRef = this._roomGrid[y][x];
 			if(roomRef instanceof BlankRoom)
 			{
-				matrix[y][x] = 1;
+				matrix[y*2][x*2] = 1;
 				
 				if(x < this._width-1)
-					matrix[y][x+1] = 1;
+					matrix[y*2][(x*2)+1] = 1;
 					
 				if(y < this._height-1)
-					matrix[y+1][x] = 1;
+					matrix[(y*2)+1][x*2] = 1;
 			}
 			else
 			{
-				matrix[y][x] = 0;
+				matrix[y*2][x*2] = 0;
 				
 				if(x < this._width-1)
-					matrix[y][x+1] = roomRef._rightDoor ? 0 : 1;
+					matrix[y*2][(x*2)+1] = roomRef._rightDoor ? 0 : 1;
 					
 				if(y < this._height-1)
-					matrix[y+1][x] = roomRef._bottomDoor ? 0 : 1;
+					matrix[(y*2)+1][x*2] = roomRef._downDoor ? 0 : 1;
 			}
 				
 			if(x < this._width-1 && y < this._height-1)
-				matrix[y+1][x+1] = 1;
+				matrix[(y*2)+1][(x*2)+1] = 1;
 		}
 	}
 	

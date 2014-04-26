@@ -71,6 +71,9 @@ WaitTask.prototype.process = function()
 	if(this._timer > this._duration)
 	{
 		this._brain._timeToProcess -= this._duration;
+		if(this._brain._timeToProcess < 0.0)
+			this._brain._timeToProcess = 0.0;
+			
 		return TASK_COMPLETE;
 	}	
 	else
@@ -241,14 +244,17 @@ MapMoveTask.prototype.process = function()
 		
 		var done = false
 		
+		var targetPos = null;
+		var xDelta = 0;
+		var yDelta = 0;
+		
 		while(!done)
 		{
 			done = true;
-			var xDelta = this._path[this._currentPathIndex][0] - roomAIPos._x;
-			var yDelta = this._path[this._currentPathIndex][1] - roomAIPos._y;
+			xDelta = this._path[this._currentPathIndex][0] - roomAIPos._x;
+			yDelta = this._path[this._currentPathIndex][1] - roomAIPos._y;
 			
 			var roomRef = gTheGame._map._roomGrid[roomPos._y][roomPos._x];
-			var targetPos = null;
 			
 			if(xDelta > 0)
 			{
