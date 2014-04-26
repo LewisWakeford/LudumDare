@@ -11,6 +11,7 @@ var KEY_LEFT = 65;
 var KEY_RIGHT = 68;
 var KEY_FORWARD = 87;
 var KEY_BACKWARD = 83;
+var KEY_ACTION = 32; //Spacebar
 
 window.addEventListener('keydown', function(event) 
 	{

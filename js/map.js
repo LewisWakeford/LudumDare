@@ -28,6 +28,8 @@ function Room(grid/*, width, height*//*Fixed room size for now.*/)
 	this._leftDoor = null;
 	this._rightDoor = null;
 	
+	this._computerImage = gTheGame.getImage("computer");
+	
 	this.buildAIGrid();
 };
 
@@ -118,8 +120,7 @@ Room.prototype.render = function(origin, context)
 					var posX = origin._x + (x * MAP_TILESIZE) - gTheGame._cameraPos._x;
 					var posY = origin._y + (y * MAP_TILESIZE) - gTheGame._cameraPos._y;
 					
-					context.fillStyle="red";
-					context.fillRect(posX,posY,MAP_TILESIZE,MAP_TILESIZE);
+					context.drawImage(this._computerImage, posX, posY, MAP_TILESIZE, MAP_TILESIZE);
 				}
 				break;
 			}

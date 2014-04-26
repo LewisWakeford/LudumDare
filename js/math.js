@@ -10,6 +10,11 @@ Vec2.prototype.clone = function()
 	return new Vec2(this._x, this._y);
 };
 
+Vec2.prototype.isEqual = function(otherVec)
+{
+	return (this._x === otherVec._x) && (this._y === otherVec._y);
+};
+
 Vec2.prototype.add = function(otherVec)
 {
 	this._x += otherVec._x;

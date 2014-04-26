@@ -39,7 +39,7 @@ $(document).ready(function()
 function initResources()
 {
 	gTheGame.startImageLoad("charsheet"		, "image/characters.png"		);
-	
+	gTheGame.startImageLoad("computer"		, "image/computer.png"			);
 	//gTheGame.startAudioLoad("footstep"	, "audio/footstep_metal.wav");
 };
 
@@ -48,7 +48,7 @@ function buildMap()
 	var grid00 = [
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0],
-    [0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+    [0, 1, 0, 0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 0, 0],
 	[0, 1, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 	[0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -60,11 +60,11 @@ function buildMap()
     [0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
     [0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
 	[0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0, 0, 0],
 	];
 	var Room00 = new Room(grid00);
 	var grid01 = [
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 3, 3, 0, 0, 0, 0, 0, 0, 0],
     [0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0],
     [0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
 	[0, 1, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0],
@@ -218,9 +218,18 @@ function buildMap()
 	
 	aiChar = new Character(new Vec2(0,0), new Vec2(8,0),1);
 	brain = new Brain(aiChar);
-	brain.addTask(new RoomMoveTask(new Vec2(0, 10)));
+	brain.addTask(new MapMoveTask(new Vec2(0,0), new Vec2(8,0)));
 	brain.addTask(new WaitTask(1.0));
-	brain.addTask(new RoomMoveTask(new Vec2(8,0)));
+	brain.addTask(new MapMoveTask(new Vec2(0,1), new Vec2(8,0)));
+	brain.addTask(new WaitTask(1.0));
+	gTheGame._sceneObjects.addEntity(aiChar);
+	gTheGame._brains.push(brain);
+	
+	aiChar = new Character(new Vec2(0,0), new Vec2(8,5),0);
+	brain = new Brain(aiChar);
+	brain.addTask(new RoomMoveTask(new Vec2(7, 2)));
+	brain.addTask(new InteractTask(5.0));
+	brain.addTask(new RoomMoveTask(new Vec2(8,5)));
 	brain.addTask(new WaitTask(1.0));
 	gTheGame._sceneObjects.addEntity(aiChar);
 	gTheGame._brains.push(brain);

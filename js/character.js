@@ -23,6 +23,8 @@ function Character(startRoomPos, startGridPos, characterId)
 	this._imageRef = gTheGame.getImage("charsheet");
 	this._isMoving = false;
 	this._nextMoveDir = -1;
+	this._interacting = false;
+	this._interactTimer = 0.0;
 };
 
 
@@ -50,6 +52,15 @@ Character.prototype.preTick = function(deltaTime)
 	if(!this._isMoving)
 	{
 		this.startNewMove(this._nextMoveDir);
+	}
+	
+	if(!this._isMoving)
+	{
+		if(this._interacting)
+		{
+			this._interactTimer += deltaTime;	
+			this.faceDirection(DIRECTION_UP);
+		}
 	}
 };
 
@@ -164,8 +175,32 @@ Character.prototype.startNewMove = function(direction)
 			
 			this._targetPos = this.getTargetPos();
 			this._isMoving = true;
+			
+			this.tryToStopInteraction();
 		}
 	}
+};
+
+Character.prototype.tryToStartInteraction = function()
+{
+	if(this._isMoving)
+		return;
+		
+	if(this._interacting)
+		return;
+		
+	var roomRef = gTheGame._map._roomGrid[this._currentRoomPos._y][this._currentRoomPos._x];
+	if(roomRef._grid[this._gridPos._y][this._gridPos._x] === MAPTILE_COMPUTER)
+	{
+		this._interacting = true;
+		this._interactTimer = 0.0;
+	}
+};
+
+Character.prototype.tryToStopInteraction = function()
+{
+	this._interacting = false;
+	this._interactTimer = 0.0;
 };
 
 Character.prototype.processPlayerInput = function()
@@ -188,4 +223,9 @@ Character.prototype.processPlayerInput = function()
 	}
 	else 
 		this.setNextMoveDir(-1);
+		
+	if(gTheGame.keyPressed(KEY_ACTION))
+	{
+		this.tryToStartInteraction();
+	}
 };

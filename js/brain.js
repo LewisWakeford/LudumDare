@@ -171,3 +171,183 @@ RoomMoveTask.prototype.process = function()
 		return TASK_COMPLETE;
 	}
 };
+
+/**
+	Class: MapMoveTask
+	Move to a place within a (potentially) different room.
+*/
+
+function MapMoveTask(roomPos, gridPos)
+{
+	this._brain = {};
+	this._currentPathIndex = 0;
+	this._destRoom = roomPos;
+	this._destGrid = gridPos;
+	
+	this._path = null;
+	this._roomMoveTask = null;
+}
+
+MapMoveTask.prototype.init = function()
+{
+	var roomPos = this._brain._character._currentRoomPos;
+	this._roomMoveTask = null;
+	
+	if(roomPos.isEqual(this._destRoom)) //Already in the room.
+	{
+		this._roomMoveTask = new RoomMoveTask(this._destGrid);
+		this._roomMoveTask._brain = this._brain;
+		this._roomMoveTask.init();
+	}
+	else
+	{
+		var roomAIPos = new Vec2(roomPos._x * 2.0, roomPos._y * 2.0);
+		var destAIPos = new Vec2(this._destRoom._x * 2.0, this._destRoom._y * 2.0);
+		
+		this._path = gPathFinder.findPath(roomAIPos._x, roomAIPos._y, destAIPos._x, destAIPos._y, gTheGame._map._aiGrid.clone());
+	}
+	
+	this._currentPathIndex = 0;
+}
+
+MapMoveTask.prototype.process = function()
+{
+	var roomPos = this._brain._character._currentRoomPos;
+	var gridPos = this._brain._character._gridPos;
+	
+	if(this._roomMoveTask)
+	{
+		var processResult = this._roomMoveTask.process();
+		
+		if(processResult === TASK_COMPLETE)
+		{
+			if(roomPos.isEqual(this._destRoom)) //Reached destination
+			{
+				this._brain._timeToProcess = 0.0;
+				this._roomMoveTask = null;
+				this._brain._character.setNextMoveDir(-1);
+				return TASK_COMPLETE
+			}
+			else
+			{
+				this._roomMoveTask = null;
+			}
+		}
+	}
+	
+	if(!this._roomMoveTask)
+	{
+		var roomAIPos = new Vec2(roomPos._x * 2.0, roomPos._y * 2.0);
+		
+		var done = false
+		
+		while(!done)
+		{
+			done = true;
+			var xDelta = this._path[this._currentPathIndex][0] - roomAIPos._x;
+			var yDelta = this._path[this._currentPathIndex][1] - roomAIPos._y;
+			
+			var roomRef = gTheGame._map._roomGrid[roomPos._y][roomPos._x];
+			var targetPos = null;
+			
+			if(xDelta > 0)
+			{
+				targetPos = roomRef._rightDoor;
+			}
+			else if(xDelta < 0)
+			{
+				targetPos = roomRef._leftDoor;
+			}
+			else if(yDelta > 0)
+			{
+				targetPos = roomRef._downDoor;
+			}
+			else if(yDelta < 0)
+			{
+				targetPos = roomRef._upDoor;
+			}
+			else
+			{
+				if(roomPos.isEqual(this._destRoom)) //Reached destination
+				{
+					targetPos = this._destGrid;
+				}
+				else
+				{
+					this._currentPathIndex += 2;
+					done = false;
+				}
+			}
+		}
+		
+		
+		if(gridPos.isEqual(targetPos))
+		{
+			if(xDelta > 0)
+			{
+				this._brain._character.setNextMoveDir(DIRECTION_RIGHT);
+			}
+			else if(xDelta < 0)
+			{
+				this._brain._character.setNextMoveDir(DIRECTION_LEFT);
+			}
+			else if(yDelta > 0)
+			{
+				this._brain._character.setNextMoveDir(DIRECTION_DOWN);
+			}
+			else if(yDelta < 0)
+			{
+				this._brain._character.setNextMoveDir(DIRECTION_UP);
+			}
+			else
+			{
+				this._brain._character.setNextMoveDir(-1);
+				this._brain.timeToProcess = 0.0;
+				return TASK_COMPLETE;
+			}
+		}
+		else
+		{	
+			this._roomMoveTask = new RoomMoveTask(targetPos);
+			this._roomMoveTask._brain = this._brain;
+			this._roomMoveTask.init();
+		}
+	}
+	
+	return TASK_CONTINUE;
+};
+
+/**
+	Class: InteractTask
+	Interact for a bit.
+*/
+
+function InteractTask(duration)
+{
+	this._brain = {};
+	this._timer = 0.0;
+	this._duration = duration;
+}
+
+InteractTask.prototype.init = function()
+{
+	this._timer = 0.0;
+}
+
+InteractTask.prototype.process = function()
+{
+	this._brain._character.tryToStartInteraction();
+
+	this._timer += this._brain._timeToProcess;
+	
+	if(this._timer > this._duration)
+	{
+		this._brain._timeToProcess -= this._duration;
+		return TASK_COMPLETE;
+	}	
+	else
+	{
+		this._brain._timeToProcess = 0.0;
+		return TASK_CONTINUE;
+	}
+};
