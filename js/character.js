@@ -5,7 +5,12 @@
 var CHARSHEET_CHAR_WIDTH = 11;
 var CHARSHEET_CHAR_HEIGHT = 26;
 var CHARACTER_SCALE = 2.0;
-var CHARACTER_SPEED = 0.2;
+var CHARACTER_SPEED = 150.0;
+
+var DIRECTION_LEFT 	= 0;
+var DIRECTION_RIGHT = 1;
+var DIRECTION_UP 	= 2;
+var DIRECTION_DOWN 	= 3;
 
 function Character(startRoomPos, startGridPos, characterId)
 {
@@ -17,6 +22,7 @@ function Character(startRoomPos, startGridPos, characterId)
 	this._animFrame = 0;
 	this._imageRef = gTheGame.getImage("charsheet");
 	this._isMoving = false;
+	this._nextMoveDir = -1;
 };
 
 
@@ -39,6 +45,11 @@ Character.prototype.preTick = function(deltaTime)
 			toTarget.scale(moveThisTick);
 			this._realPos.add(toTarget);
 		}
+	}
+	
+	if(!this._isMoving)
+	{
+		this.startNewMove(this._nextMoveDir);
 	}
 };
 
@@ -66,52 +77,115 @@ Character.prototype.getTargetPos = function()
 	return gTheGame._map.getTargetPos(this, this._currentRoomPos, this._gridPos);
 };
 
-Character.prototype.processPlayerInput = function()
+Character.prototype.faceDirection = function(direction)
 {
 	if(!this._isMoving)
 	{
-		var dir = new Vec2(0, 0);
-		
-		if(gTheGame.keyPressed(KEY_LEFT))
+		switch(direction)
 		{
-			dir._x = -1;
-			this._animFrame = 2;
-		}
-		else if(gTheGame.keyPressed(KEY_RIGHT))
-		{
-			dir._x = 1;
-			this._animFrame = 1;
-		}
-		else if(gTheGame.keyPressed(KEY_FORWARD))
-		{
-			dir._y = -1;
-			this._animFrame = 3;
-		}
-		else if(gTheGame.keyPressed(KEY_BACKWARD))
-		{
-			dir._y = 1;
-			this._animFrame = 0;
-		}
-	
-		if(dir._x != 0 || dir._y != 0)
-		{
-			var testPos = this._gridPos.sum(dir);
-	
-			if(gTheGame._map.isWalkable(this._currentRoomPos, testPos))
+			case DIRECTION_LEFT :
 			{
-				this._gridPos = testPos;
-				gTheGame._map.fixupGridPos(this._currentRoomPos, this._gridPos);
-				
-				//Javascript you cray cray...
-				this._currentRoomPos = this._currentRoomPos.value.clone();
-				this._gridPos = this._gridPos.value.clone();
-				
-				this._targetPos = this.getTargetPos();
-				this._isMoving = true;
+				this._animFrame = 2;
 			}
+			break;
+			case DIRECTION_RIGHT :
+			{
+				this._animFrame = 1;
+			}
+			break;
+			case DIRECTION_UP :
+			{
+				this._animFrame = 3;
+			}
+			break;
+			case DIRECTION_DOWN :
+			{
+				this._animFrame = 0;
+			}
+			break;
 		}
-		
 	}
 	
+};
 
+Character.prototype.setNextMoveDir = function(direction)
+{
+	this._nextMoveDir = direction;
+};
+
+Character.prototype.startNewMove = function(direction)
+{
+	if(direction === -1)
+		return;
+
+	if(this._isMoving)
+		return; //Shouldn't have called this anyway.
+		
+	var dir = new Vec2(0, 0);
+		
+	this.faceDirection(direction);
+		
+	switch(direction)
+	{
+		case DIRECTION_LEFT :
+		{
+			dir._x = -1;
+		}
+		break;
+		case DIRECTION_RIGHT :
+		{
+			dir._x = 1;
+		}
+		break;
+		case DIRECTION_UP :
+		{
+			dir._y = -1;
+		}
+		break;
+		case DIRECTION_DOWN :
+		{
+			dir._y = 1;
+		}
+		break;
+	}
+	
+	if(dir._x != 0 || dir._y != 0)
+	{
+		var testPos = this._gridPos.sum(dir);
+
+		if(gTheGame._map.isWalkable(this._currentRoomPos, testPos))
+		{
+			this._gridPos = testPos;
+			gTheGame._map.fixupGridPos(this._currentRoomPos, this._gridPos);
+			
+			//Javascript you cray cray...
+			this._currentRoomPos = this._currentRoomPos.value.clone();
+			this._gridPos = this._gridPos.value.clone();
+			
+			this._targetPos = this.getTargetPos();
+			this._isMoving = true;
+		}
+	}
+};
+
+Character.prototype.processPlayerInput = function()
+{	
+	if(gTheGame.keyPressed(KEY_LEFT))
+	{
+		this.setNextMoveDir(DIRECTION_LEFT);
+	}
+	else if(gTheGame.keyPressed(KEY_RIGHT))
+	{
+		this.setNextMoveDir(DIRECTION_RIGHT);
+	}
+	else if(gTheGame.keyPressed(KEY_FORWARD))
+	{
+		this.setNextMoveDir(DIRECTION_UP);
+	}
+	else if(gTheGame.keyPressed(KEY_BACKWARD))
+	{
+		this.setNextMoveDir(DIRECTION_DOWN);
+	}
+	else 
+		this.setNextMoveDir(-1);
 };

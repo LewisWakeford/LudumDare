@@ -43,6 +43,8 @@ function Game()
 	this._images = new Array(); //Image objects
 	this._sounds = new Array();
 	
+	this._brains = new Array();
+	
 	this._tickCount = 0;
 	this._lastTickTime = 0.0;
 
@@ -188,7 +190,7 @@ Game.prototype.processDeltaTime = function()
         return 0.0;
     }
 	
-    this._deltaTime = (currentTime - this._lastTickTime);
+    this._deltaTime = (currentTime - this._lastTickTime)/1000;
     this._lastTickTime = currentTime;
 };
 
@@ -200,6 +202,14 @@ Game.prototype.processPlayerInput = function()
 		this._cameraPos = this._playerCharacter._realPos.clone();
 		this._cameraPos._y -= this._viewportHeight * 0.5;
 		this._cameraPos._x -= this._viewportWidth * 0.5;
+	}
+};
+
+Game.prototype.processAI = function()
+{
+	for(var i = 0; i < this._brains.length; i++)
+	{
+		this._brains[i].process(this._deltaTime);
 	}
 };
 
@@ -224,7 +234,6 @@ Game.prototype.renderLoadingScreen = function()
 Game.prototype.loop = function()
 {
 	this.processDeltaTime();
-	this.processPlayerInput();
 	
 	if(!this.resourcesLoaded())
 	{
@@ -233,6 +242,9 @@ Game.prototype.loop = function()
 	else
 	{
 		//Main Loop
+		this.processPlayerInput();
+		this.processAI();
+		
 		this.preTick(this._deltaTime);
 		
 		this.render();

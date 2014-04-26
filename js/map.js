@@ -1,6 +1,7 @@
 var MAPTILE_BLANK 		= 0;
 var MAPTILE_WALL 		= 1;
 var MAPTILE_COMPUTER 	= 2;
+var MAPTILE_AIDOOR		= 3;
 
 var MAP_TILESIZE = 50;
 var MAP_TILESIZE_HALF = MAP_TILESIZE * 0.5;
@@ -22,12 +23,65 @@ function Room(grid/*, width, height*//*Fixed room size for now.*/)
 	if(this._grid[0].length != MAP_ROOMSIZE)
 		throw "Room's grid is wrong width: " + this._grid[0].length;
 	
+	this._upDoor = null;
+	this._downDoor = null;
+	this._leftDoor = null;
+	this._rightDoor = null;
+	
 	this.buildAIGrid();
 };
 
 Room.prototype.buildAIGrid = function()
 {
+	var matrix = new Array(this._height);
+	for(var y = 0; y < this._height; y++)
+	{
+		matrix[y] = new Array(this._width);
+		for(var x = 0; x < this._width; x++)
+		{
+			var mapTileId = this._grid[y][x];
+			switch(mapTileId)
+			{
+				case MAPTILE_BLANK :
+				{
+					matrix[y][x] = 0;
+				}
+				break;
+				case MAPTILE_WALL :
+				{
+					matrix[y][x] = 1;
+				}
+				break;
+				case MAPTILE_COMPUTER :
+				{
+					matrix[y][x] = 0;
+				}
+				break;
+				case MAPTILE_AIDOOR :
+				{
+					this.addAIDoor(x, y);
+					matrix[y][x] = MAPTILE_BLANK;
+				}
+				break;
+			}
+		}
+	}
+	
+	this._aiGrid = new PF.Grid(matrix[0].length, matrix.length, matrix);
+};
 
+Room.prototype.addAIDoor = function(x, y)
+{
+	if(x === 0)
+		this._leftDoor = new Vec2(x, y);
+	else if(x === this._width-1)
+		this._rightDoor = new Vec2(x, y);
+	else if(y === 0)
+		this._upDoor = new Vec2(x, y);
+	else if(y === this._height-1)
+		this._downDoor = new Vec2(x, y);
+	else
+		throw "invalid position for ai door";
 };
 
 Room.prototype.preTick = function(deltaTime)
@@ -130,7 +184,46 @@ function Map(roomGrid, width, height)
 
 Map.prototype.buildAIGrid = function()
 {
-
+	//Build Grid
+	var matrix = new Array((2*this._height)-1);
+	for(var y = 0; y < matrix.length; y++)
+	{
+		matrix[y] = new Array((2*this._width)-1);
+	}
+	
+	//Fill grid in
+	for(var y = 0; y < this._height; y++)
+	{
+		for(var x = 0; x < this._width; x++)
+		{
+			var roomRef = this._roomGrid[y][x];
+			if(roomRef instanceof BlankRoom)
+			{
+				matrix[y][x] = 1;
+				
+				if(x < this._width-1)
+					matrix[y][x+1] = 1;
+					
+				if(y < this._height-1)
+					matrix[y+1][x] = 1;
+			}
+			else
+			{
+				matrix[y][x] = 0;
+				
+				if(x < this._width-1)
+					matrix[y][x+1] = roomRef._rightDoor ? 0 : 1;
+					
+				if(y < this._height-1)
+					matrix[y+1][x] = roomRef._bottomDoor ? 0 : 1;
+			}
+				
+			if(x < this._width-1 && y < this._height-1)
+				matrix[y+1][x+1] = 1;
+		}
+	}
+	
+	this._aiGrid = new PF.Grid(matrix[0].length, matrix.length, matrix);
 };
 
 Map.prototype.preTick = function(deltaTime)

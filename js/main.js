@@ -1,4 +1,5 @@
 var gCtx2D;
+var gPathFinder;
 
 //I put all the static hardcoded shit here.
 
@@ -19,6 +20,8 @@ $(document).ready(function()
 		
 		//INIT!
 		console.log("Begin Init");
+		gPathFinder = new PF.AStarFinder();
+		
 		initResources();
 		buildMap();
 		
@@ -196,6 +199,29 @@ function buildMap()
 	var map = new Map(roomGrid, 3, 3);
 	gTheGame.addMap(map);
 	
+	//Player
 	gTheGame.addPlayer(new Character(new Vec2(0,0), new Vec2(0,0), 0));
-	gTheGame._sceneObjects.addEntity(new Character(new Vec2(0,0), new Vec2(2,0),1));
+	
+	var aiChar;
+	var brain;
+	
+	aiChar = new Character(new Vec2(0,0), new Vec2(2,0),1);
+	brain = new Brain(aiChar);
+	brain.addTask(new WaitTask(1.0));
+	brain.addTask(new FaceTask(DIRECTION_RIGHT));
+	brain.addTask(new WaitTask(1.0));
+	brain.addTask(new FaceTask(DIRECTION_LEFT));
+	brain.addTask(new WaitTask(1.0));
+	brain.addTask(new FaceTask(DIRECTION_DOWN));
+	gTheGame._sceneObjects.addEntity(aiChar);
+	gTheGame._brains.push(brain);
+	
+	aiChar = new Character(new Vec2(0,0), new Vec2(8,0),1);
+	brain = new Brain(aiChar);
+	brain.addTask(new RoomMoveTask(new Vec2(0, 10)));
+	brain.addTask(new WaitTask(1.0));
+	brain.addTask(new RoomMoveTask(new Vec2(8,0)));
+	brain.addTask(new WaitTask(1.0));
+	gTheGame._sceneObjects.addEntity(aiChar);
+	gTheGame._brains.push(brain);
 };
