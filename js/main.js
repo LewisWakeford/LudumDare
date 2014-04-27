@@ -12,7 +12,7 @@ $(document).ready(function()
 {
 	$("#title").text("Act Natural");
 	$("#instructions").html(
-		"Steal the super-secret information without being caught. Move around with WASD. Space to Interact with objects.<br>" +
+		"Steal the super-secret information without being caught. Move around with WASD. Space to Interact with objects. P to toggle SFX.<br>" +
 		"Attempt to blend in to avoid <strong>attention</strong>. That text on the left should show you what you need to do.<br>" +
 		"Blue guys are guards, drawing attention while they can see you will eventually lead to <strong>detection</strong>.<br>" +
 		"Hack the 3 computers with secrets in them and then return to the entrance without letting your detection reach 100."
