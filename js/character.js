@@ -16,6 +16,8 @@ var HACK_TIME = 3.0;
 
 var GUARD_SIGHTRANGE = 6 * MAP_TILESIZE;
 
+var CLOSENESS_DISTANCE_MOD = 0.5;
+
 function Character(startRoomPos, startGridPos, characterId)
 {
 	this._currentRoomPos = startRoomPos;
@@ -29,6 +31,7 @@ function Character(startRoomPos, startGridPos, characterId)
 	this._nextMoveDir = -1;
 	this._interacting = false;
 	this._interactTimer = 0.0;
+	this._closeness = 0.0;
 	
 	var roomRef = gTheGame._map._roomGrid[startRoomPos._y][startRoomPos._x];
 	roomRef.addCharacter(this);
@@ -116,6 +119,12 @@ Character.prototype.render = function(context)
 		}
 		context.fillText(text, posX, posY);
 	}
+	
+	/*
+	context.fillStyle = "red";
+	context.font = "15px Arial Bold";
+	context.fillText(this._closeness, posX, posY);
+	*/
 };
 
 Character.prototype.postTick = function(deltaTime)
@@ -314,5 +323,20 @@ Character.prototype.processPlayerInput = function()
 	if(gTheGame.keyPressed(KEY_ACTION))
 	{
 		this.tryToStartInteraction();
+	}
+};
+
+//Closeness is an abstraction based on how many other characters are nearby.
+Character.prototype.calculateCloseness = function(otherCharacters)
+{
+	this._closeness = 0.0;
+	for(var i = 0; i < otherCharacters.length; i++)
+	{
+		if(otherCharacters[i] === this)
+			continue;
+			
+		var toOther = otherCharacters[i]._realPos.diff(this._realPos);
+		var distance = Math.max(1.0, (toOther.mag()/MAP_TILESIZE)*CLOSENESS_DISTANCE_MOD);
+		this._closeness += 1.0 / distance;
 	}
 };

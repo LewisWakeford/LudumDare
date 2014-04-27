@@ -8,9 +8,10 @@ var MAP_TILESIZE = 50;
 var MAP_TILESIZE_HALF = MAP_TILESIZE * 0.5;
 var MAP_ROOMSIZE = 15;
 
-var ATTENTION_POS_MOD = 1.0;
-var ATTENTION_VEL_MOD = 0.05;
-var ATTENTION_WORK_ADD = 30.0;
+var ATTENTION_CLOSENESS_THRESHOLD = 0.2;
+var ATTENTION_CLOSENESS_MOD = 30.0;
+var ATTENTION_MOVE = 30.0;
+var ATTENTION_WORK = 30.0;
 
 /**
 	Class: Room
@@ -40,11 +41,9 @@ function Room(grid/*, width, height*//*Fixed room size for now.*/)
 	
 	this._characters = new Array();
 	
-	this._averagePos = new Vec2(0.0, 0.0);
-	this._variancePos = 0.0;
-	this._averageVel = new Vec2(0.0, 0.0);
-	this._varianceVel = 0.0;
-	this._workerRatio = 0.0;
+	this._averageCloseness 	= 0.0;
+	this._moveRatio			= 0.0;
+	this._workerRatio		= 0.0;
 	
 	this.buildAIGrid();
 };
@@ -116,25 +115,21 @@ Room.prototype.analyzeCharacters = function()
 	if(this._characters.length < 2)
 		return;
 	
-	var averagePos = new Vec2(0.0, 0.0);
-	var averageVelocity = new Vec2(0.0, 0.0);
-	var workerRatio = 0;
+	var averageCloseness = 0.0;
+	var moveRatio = 0.0;
+	var workerRatio = 0.0;
 	for(var i = 0; i < this._characters.length; i++)
 	{
+		this._characters[i].calculateCloseness(this._characters);
+	
 		if(this._characters[i] == gTheGame._playerCharacter)
 			continue;
-	
-		averagePos._x += this._characters[i]._realPos._x;
-		averagePos._y += this._characters[i]._realPos._y;
+		
+		averageCloseness += this._characters[i]._closeness;
 		
 		if(this._characters[i]._isMoving)
 		{
-			var toTarget = this._characters[i]._targetPos.diff(this._characters[i]._realPos);
-			toTarget.normalise();
-			toTarget.scale(CHARACTER_SPEED);
-			averageVelocity._x += toTarget._x;
-			averageVelocity._y += toTarget._y;
-			this._characters[i]._TEMP_toTarget = toTarget;
+			moveRatio++;
 		}
 		
 		if(this._characters[i]._interacting)
@@ -144,44 +139,12 @@ Room.prototype.analyzeCharacters = function()
 	}
 	
 	//-1 because we don't include player.
-	averagePos._x /= this._characters.length-1;
-	averagePos._y /= this._characters.length-1;
-	averageVelocity._x /= this._characters.length-1;
-	averageVelocity._y /= this._characters.length-1;
-	workerRatio /= this._characters.length-1;
+	averageCloseness	/= this._characters.length-1;
+	moveRatio			/= this._characters.length-1;
+	workerRatio			/= this._characters.length-1;
 	
-	var averageSpeed = averageVelocity.mag();
-	
-	//Get variance
-	var variancePos = 0.0;
-	var varianceVel = 0.0;
-
-	for(var i = 0; i < this._characters.length; i++)
-	{
-		if(this._characters[i] == gTheGame._playerCharacter)
-			continue;
-	
-		var toAvgPos = averagePos.diff(this._characters[i]._realPos);
-		variancePos += toAvgPos.mag();
-		
-		if(this._characters[i]._isMoving)
-		{
-			var toAvgVel = averageVelocity.diff(this._characters[i]._TEMP_toTarget);
-			varianceVel += toAvgPos.mag();
-		}
-		else
-		{
-			varianceVel += averageSpeed;
-		}
-	}
-	
-	variancePos /= this._characters.length-1;
-	varianceVel /= this._characters.length-1;
-	
-	this._averagePos = averagePos;
-	this._averageVel = averageVelocity;
-	this._variancePos = variancePos;
-	this._varianceVel = varianceVel;
+	this._averageCloseness = averageCloseness;
+	this._moveRatio = moveRatio;
 	this._workerRatio = workerRatio;
 };
 
@@ -191,19 +154,65 @@ Room.prototype.howMuchAttention = function(character)
 		return 0;
 
 	var attention = 0;
-	var characterPosVariance = this._averagePos.diff(character._realPos).mag();
-	var toTarget = character._targetPos.diff(character._realPos);
-	toTarget.scale(CHARACTER_SPEED);
-	var characterVelVariance = this._averageVel.diff(toTarget).mag();
 	
-	attention += ATTENTION_POS_MOD * Math.max(0.0, characterPosVariance - this._variancePos);
-	attention += ATTENTION_VEL_MOD * Math.max(0.0, characterVelVariance - this._varianceVel);
+	var closenessDiff = Math.max(0.0,  this._averageCloseness - character._closeness - ATTENTION_CLOSENESS_THRESHOLD);
+	var attentionFromCloseness = closenessDiff * ATTENTION_CLOSENESS_MOD;
+	
+	if(attentionFromCloseness > 0.0)
+	{
+		gTheGame._attentionClose = "You are standing on your own: +" + Math.floor(attentionFromCloseness) + " Att";
+		gTheGame._attentionCloseColor = "red";
+		attention += attentionFromCloseness;
+	}
+	else
+	{
+		gTheGame._attentionClose = "You look like part of the group, or there is no group.";
+		gTheGame._attentionCloseColor = "#00FF00";
+	}
+	
+	if(character._isMoving && this._moveRatio <= 0.2)
+	{
+		gTheGame._attentionMove = "You are moving around alone: +30 Att";
+		gTheGame._attentionMoveColor = "red";
+		attention += ATTENTION_MOVE;
+	}		
+	else if(!character._isMoving && this._moveRatio >= 0.7)
+	{
+		gTheGame._attentionMove = "You are standing still: +30 Att";
+		gTheGame._attentionMoveColor = "red";
+		attention += ATTENTION_MOVE;
+	}
+	else
+	{
+		if(!character._isMoving)
+			gTheGame._attentionMove = "You are standing still like everyone else.";
+		else
+			gTheGame._attentionMove = "You are moving around with friends";
+			
+		gTheGame._attentionMoveColor = "#00FF00";
+	}
 	
 	if(character._interacting && this._workerRatio <= 0.0)
-		attention += ATTENTION_WORK_ADD;
-		
-	if(!character._interacting && this._workerRatio >= 0.6)
-		attention += ATTENTION_WORK_ADD;
+	{
+		gTheGame._attentionWork = "You are the only one doing any work: +30 Att";
+		gTheGame._attentionWorkColor = "red";
+		attention += ATTENTION_WORK;
+	}
+	else if(!character._interacting && this._workerRatio >= 0.6)
+	{
+		gTheGame._attentionWork = "You should probably be working: +30 Att";
+		gTheGame._attentionWorkColor = "red";
+		attention += ATTENTION_WORK;
+	}
+	else
+	{
+		if(character._interacting)
+			gTheGame._attentionWork = "You are working, like most people in this room.";
+		else
+			gTheGame._attentionWork = "Not everyone is doing work here.";
+			
+		gTheGame._attentionWorkColor = "#00FF00";
+	}
 		
 	return attention;
 };

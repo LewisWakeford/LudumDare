@@ -13,8 +13,8 @@ var KEY_FORWARD = 87;
 var KEY_BACKWARD = 83;
 var KEY_ACTION = 32; //Spacebar
 
-var DETECTION_RATE = 0.2;
-var DETECTION_LIMIT = 1000;
+var DETECTION_RATE = 0.4;
+var DETECTION_LIMIT = 100;
 
 var STATE_PLAY = 0;
 var STATE_WIN = 1;
@@ -73,6 +73,13 @@ function Game()
 	this._reset = false;
 	
 	this._state = STATE_PLAY;
+	
+	this._attentionClose 	= "";
+	this._attentionCloseColor = "";
+	this._attentionMove 	= "";
+	this._attentionMoveColor = "";
+	this._attentionWork 	= "";
+	this._attentionWorkColor = "";
 	
 };
 	
@@ -191,10 +198,33 @@ Game.prototype.render = function()
 
 Game.prototype.renderHUD = function()
 {
-	this._ctx2D.fillStyle = "red";
 	this._ctx2D.font = "20px Arial";
+	
+	if(this._playerDetection >= 75)
+		this._ctx2D.fillStyle = "#FF0000";
+	else if(this._playerDetection >= 50)
+		this._ctx2D.fillStyle = "#FFFF00";
+	else
+		this._ctx2D.fillStyle = "#00FF00";
 	this._ctx2D.fillText("Detection: " + Math.round(this._playerDetection), 50, 50);
+	
+	if(this._playerAttention >= 60)
+		this._ctx2D.fillStyle = "#FF0000";
+	else if(this._playerAttention >= 30)
+		this._ctx2D.fillStyle = "#FFFF00";
+	else
+		this._ctx2D.fillStyle = "#00FF00";
 	this._ctx2D.fillText("Attention: " + Math.round(this._playerAttention), 50, 75);
+	
+	this._ctx2D.fillStyle = "#00FF00";
+	this._ctx2D.fillText("RoomStatus: ", 50, 100);
+	this._ctx2D.font = "15px Arial";
+	this._ctx2D.fillStyle = this._attentionCloseColor;
+	this._ctx2D.fillText(this._attentionClose, 50, 125);
+	this._ctx2D.fillStyle = this._attentionMoveColor;
+	this._ctx2D.fillText(this._attentionMove, 50, 150);
+	this._ctx2D.fillStyle = this._attentionWorkColor;
+	this._ctx2D.fillText(this._attentionWork, 50, 175);
 };
 
 Game.prototype.renderWin = function()
