@@ -87,16 +87,16 @@ Game.prototype.startImageLoad = function(shortname, filepath)
 {
 	this._imagesLoading++;
 	var imageObj = new Image();
-	imageObj.onload = gTheGame.imageLoaded();
+	imageObj.onload = imageLoaded;
 	imageObj.src = filepath;
 	imageObj.game_shortname = shortname;
 	
 	this._images.push(imageObj)
 };
 
-Game.prototype.imageLoaded = function()
+function imageLoaded()
 {
-	this._imagesLoaded++;
+	gTheGame._imagesLoaded++;
 };
 
 Game.prototype.getImage = function(shortname)
@@ -116,16 +116,16 @@ Game.prototype.startAudioLoad = function(shortname, filepath)
 {
 	this._soundsLoading++;
 	var soundObj = new Audio();
-	soundObj.onload = gTheGame.soundLoaded();
+	soundObj.onload = soundLoaded;
 	soundObj.src = filepath;
 	soundObj.game_shortname = shortname;
 	
 	this._sounds.push(soundObj)
 };
 
-Game.prototype.soundLoaded = function()
+function soundLoaded()
 {
-	this._soundsLoaded++;
+	gTheGame._soundsLoaded++;
 };
 
 Game.prototype.getSound = function(shortname)
