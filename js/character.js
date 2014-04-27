@@ -32,6 +32,7 @@ function Character(startRoomPos, startGridPos, characterId)
 	this._interacting = false;
 	this._interactTimer = 0.0;
 	this._closeness = 0.0;
+	this._hasSeenPlayer = false;
 	
 	var roomRef = gTheGame._map._roomGrid[startRoomPos._y][startRoomPos._x];
 	roomRef.addCharacter(this);
@@ -109,7 +110,7 @@ Character.prototype.render = function(context)
 	if(this._interacting)
 	{
 		context.fillStyle = "white";
-		context.font = "15px Arial Bold";
+		context.font = "15px Arial";
 		var numDots = ((this._interactTimer / HACK_TIME) * 6) % 6;
 		var text = "";
 		while(numDots > 0.0)
@@ -118,6 +119,13 @@ Character.prototype.render = function(context)
 			numDots -= 1.0;
 		}
 		context.fillText(text, posX, posY);
+	}
+	
+	if(this._hasSeenPlayer)
+	{
+		context.fillStyle = "red";
+		context.font = "25px Arial";
+		context.fillText("?", posX+(characterWidth * 0.5), posY);
 	}
 	
 	/*
@@ -129,11 +137,13 @@ Character.prototype.render = function(context)
 
 Character.prototype.postTick = function(deltaTime)
 {
+	this._hasSeenPlayer = false;
 	if(this._characterId === 1)
 	{
 		if(this.canSeePlayer())
 		{
 			gTheGame.onGuardSeePlayer(deltaTime);
+			this._hasSeenPlayer = true;
 		}
 	}
 };

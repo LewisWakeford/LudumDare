@@ -3,10 +3,9 @@
 	Renders everything in it.
 */
 
-function EntityList(game)
+function EntityList()
 {
 	this.entities = new Array();
-	this.game = game;
 }
 
 EntityList.prototype.addEntity = function(entity)

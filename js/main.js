@@ -11,8 +11,9 @@ var gTrigBreakRoom = new Trigger();
 $(document).ready(function()
 {
 	$("#title").text("Act Natural");
-	$("#instructions").html("Move around with WASD. Space to Interact with objects.<br>" +
-		"Attempt to blend in to avoid <strong>attention</strong>.<br>" +
+	$("#instructions").html(
+		"Steal the super-secret information without being caught. Move around with WASD. Space to Interact with objects.<br>" +
+		"Attempt to blend in to avoid <strong>attention</strong>. That text on the left should show you what you need to do.<br>" +
 		"Blue guys are guards, drawing attention while they can see you will eventually lead to <strong>detection</strong>.<br>" +
 		"Hack the 3 computers with secrets in them and then return to the entrance without letting your detection reach 100."
 		);
@@ -56,6 +57,7 @@ function loopGame()
 	
 	if(gTheGame._reset)
 	{
+		gTheGame._music.pause();
 		gTheGame = null;
 		makeGame();
 	}
@@ -73,7 +75,10 @@ function initResources()
 	gTheGame.startImageLoad("charsheet"		, "image/characters.png"		);
 	gTheGame.startImageLoad("computer"		, "image/computer.png"			);
 	gTheGame.startImageLoad("file"			, "image/file.png"				);
-	//gTheGame.startAudioLoad("footstep"	, "audio/footstep_metal.wav");
+	
+	gTheGame.startAudioLoad("music"			, "audio/music.wav"				);
+	gTheGame.startAudioLoad("hack"			, "audio/hack.wav"				);
+	gTheGame.startAudioLoad("derp"			, "audio/derp.wav"				);
 };
 
 function buildMap()
@@ -125,10 +130,10 @@ function buildMap()
     [1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
 	[1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
     [1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-	[1, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1],
-    [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1],
+	[1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1],
     [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1],
-	[1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+	[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 	];
 	var Room02 = new Room(grid02);

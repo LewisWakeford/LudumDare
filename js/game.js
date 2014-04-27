@@ -7,11 +7,12 @@ var FRAME_RATE = 1000/60; //Let's try for 60.
 var gTheGame;
 
 //KEYS
-var KEY_LEFT = 65;
-var KEY_RIGHT = 68;
-var KEY_FORWARD = 87;
-var KEY_BACKWARD = 83;
+var KEY_LEFT = 65; //A
+var KEY_RIGHT = 68; //D
+var KEY_FORWARD = 87; //W
+var KEY_BACKWARD = 83; //S
 var KEY_ACTION = 32; //Spacebar
+var KEY_SOUND =  80; //P
 
 var DETECTION_RATE = 0.4;
 var DETECTION_LIMIT = 100;
@@ -41,6 +42,8 @@ function Game()
 	
 	this._images = new Array(); //Image objects
 	this._sounds = new Array();
+	
+	this._music = null;
 	
 	this._brains = new Array();
 	
@@ -81,6 +84,8 @@ function Game()
 	this._attentionWork 	= "";
 	this._attentionWorkColor = "";
 	
+	this._soundEnabled = true;
+	
 };
 	
 Game.prototype.startImageLoad = function(shortname, filepath)
@@ -116,7 +121,7 @@ Game.prototype.startAudioLoad = function(shortname, filepath)
 {
 	this._soundsLoading++;
 	var soundObj = new Audio();
-	soundObj.onload = soundLoaded;
+	soundObj.oncanplaythrough = soundLoaded;
 	soundObj.src = filepath;
 	soundObj.game_shortname = shortname;
 	
@@ -293,6 +298,39 @@ Game.prototype.processLose = function()
 		this._reset = true;
 };
 
+Game.prototype.processMusic = function()
+{
+	if(this._soundEnabled)
+	{
+		if(this._music)
+		{
+			if(this._music.paused)
+				this._music.play();
+		}
+		else
+		{
+			this._music = this.getSound("music");
+			this._music.addEventListener('ended', function() {
+				this.currentTime = 0;
+				this.play();
+			}, false);
+			this._music.play();
+		}
+	}
+	else
+	{
+		if(this._music)
+		{
+			this._music.pause();
+		}
+		else
+		{
+			
+		}
+	}
+	
+};
+
 Game.prototype.onGuardSeePlayer = function(deltaTime)
 {
 	this._playerDetection += this._playerAttention * DETECTION_RATE * deltaTime;
@@ -343,6 +381,7 @@ Game.prototype.loop = function()
 			else
 			{
 				//Main Loop
+				this.processMusic();
 				this.processPlayer();
 				this.processAI();
 				
@@ -387,6 +426,8 @@ Game.prototype.postTick = function(deltaTime)
 Game.prototype.keyDown = function(keyCode)
 {
 	this._keysPressed[keyCode] = true;
+	if(keyCode === KEY_SOUND)
+		this._soundEnabled = !this._soundEnabled;
 };
 
 Game.prototype.keyUp = function(keyCode)
@@ -416,6 +457,13 @@ Game.prototype.isObjective = function(roomRef, gridPos)
 
 Game.prototype.completeObjective = function(roomRef, gridPos)
 {
+	if(this._soundEnabled)
+	{
+		var hackSound = this.getSound("hack");
+		hackSound.currentTime = 0;
+		hackSound.play();
+	}
+	
 	for(var i = 0; i < this._objectiveRoom.length; i++)
 	{
 		var objectiveRoom = this._map._roomGrid[this._objectiveRoom[i]._y][this._objectiveRoom[i]._x];
