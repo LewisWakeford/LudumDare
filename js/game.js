@@ -13,6 +13,13 @@ var KEY_FORWARD = 87;
 var KEY_BACKWARD = 83;
 var KEY_ACTION = 32; //Spacebar
 
+var DETECTION_RATE = 0.2;
+var DETECTION_LIMIT = 1000;
+
+var STATE_PLAY = 0;
+var STATE_WIN = 1;
+var STATE_LOSE = 2;
+
 window.addEventListener('keydown', function(event) 
 	{
 	if(typeof gTheGame != 'undefined')
@@ -26,15 +33,6 @@ window.addEventListener('keyup', function(event)
 		gTheGame.keyUp(event.keyCode);
 	}, false
 );
-	
-function loopGame()
-{
-	gTheGame.loop();
-	var nextFrame = FRAME_RATE-gTheGame._deltaTime;
-	nextFrame = Math.min(nextFrame, FRAME_RATE);
-	nextFrame = Math.max(nextFrame, 0.0);
-	setTimeout(loopGame, nextFrame);
-}
 
 function Game()
 {
@@ -66,8 +64,17 @@ function Game()
 	
 	this._map = {};
 	this._playerCharacter = {};
+	this._playerAttention = 0.0;
+	this._playerDetection = 0.0;
 	
-}
+	this._objectiveRoom = new Array();
+	this._objectiveGrid = new Array();
+	
+	this._reset = false;
+	
+	this._state = STATE_PLAY;
+	
+};
 	
 Game.prototype.startImageLoad = function(shortname, filepath)
 {
@@ -78,12 +85,12 @@ Game.prototype.startImageLoad = function(shortname, filepath)
 	imageObj.game_shortname = shortname;
 	
 	this._images.push(imageObj)
-}
+};
 
 Game.prototype.imageLoaded = function()
 {
 	this._imagesLoaded++;
-}
+};
 
 Game.prototype.getImage = function(shortname)
 {
@@ -96,7 +103,7 @@ Game.prototype.getImage = function(shortname)
 	}
 	
 	return null;
-}
+};
 
 Game.prototype.startAudioLoad = function(shortname, filepath)
 {
@@ -107,12 +114,12 @@ Game.prototype.startAudioLoad = function(shortname, filepath)
 	soundObj.game_shortname = shortname;
 	
 	this._sounds.push(soundObj)
-}
+};
 
 Game.prototype.soundLoaded = function()
 {
 	this._soundsLoaded++;
-}
+};
 
 Game.prototype.getSound = function(shortname)
 {
@@ -125,17 +132,17 @@ Game.prototype.getSound = function(shortname)
 	}
 	
 	return null;
-}
+};
 
 Game.prototype.resourcesLoaded = function()
 {
 	return (this._imagesLoaded >= this._imagesLoading) && (this._soundsLoaded >= this._soundsLoading);
-}	
+};
 
 Game.prototype.setContext = function(context)
 {
 	this._ctx2D = context;
-}
+};
 	
 Game.prototype.getContext = function()
 {
@@ -174,11 +181,42 @@ Game.prototype.render = function()
 	{
 		this.clearCanvas();
 		this._sceneObjects.render(this._ctx2D);
+		this.renderHUD();
 	}
 	else
 	{
 		console.log("ERROR: Missing cavnas context.");
 	}
+};
+
+Game.prototype.renderHUD = function()
+{
+	this._ctx2D.fillStyle = "red";
+	this._ctx2D.font = "20px Arial";
+	this._ctx2D.fillText("Detection: " + Math.round(this._playerDetection), 50, 50);
+	this._ctx2D.fillText("Attention: " + Math.round(this._playerAttention), 50, 75);
+};
+
+Game.prototype.renderWin = function()
+{
+	this._ctx2D.fillStyle = "#00FF00";
+	this._ctx2D.font = "50px Arial";
+	this._ctx2D.fillText("YOU WON THE GAME!", 150, 200);
+	this._ctx2D.font = "13px Arial";
+	this._ctx2D.fillText("congrats!", 615, 225);
+	this._ctx2D.font = "20px Arial";
+	this._ctx2D.fillText("Press SPACEBAR to restart.", 280, 400);
+};
+
+Game.prototype.renderLose = function()
+{
+	this._ctx2D.fillStyle = "#FF0000";
+	this._ctx2D.font = "50px Arial";
+	this._ctx2D.fillText("YOU LOST THE GAME!", 150, 200);
+	this._ctx2D.font = "20px Arial";
+	this._ctx2D.fillText("Pretend I animated a scene of your guy getting arrested or something...", 150, 275);
+	this._ctx2D.font = "20px Arial";
+	this._ctx2D.fillText("Press SPACEBAR to restart.", 280, 400);
 };
 
 Game.prototype.processDeltaTime = function()
@@ -195,16 +233,42 @@ Game.prototype.processDeltaTime = function()
     this._lastTickTime = currentTime;
 };
 
-Game.prototype.processPlayerInput = function()
+Game.prototype.processPlayer = function()
 {
 	if(this._playerCharacter !== 'undefined')
 	{
+		var roomRef = this._map._roomGrid[this._playerCharacter._currentRoomPos._y][this._playerCharacter._currentRoomPos._x];
+		
+		if(this._objectiveRoom.length === 0 && roomRef.isExit(this._playerCharacter._gridPos))
+			this._state = STATE_WIN;
+		
+		this._playerAttention = roomRef.howMuchAttention(this._playerCharacter);
+		
 		this._playerCharacter.processPlayerInput();
 		this._cameraPos = this._playerCharacter._realPos.clone();
 		this._cameraPos._y -= this._viewportHeight * 0.5;
 		this._cameraPos._x -= this._viewportWidth * 0.5;
 	}
 };
+
+Game.prototype.processWin = function()
+{
+	if(this.keyPressed(KEY_ACTION))
+		this._reset = true;
+};
+
+Game.prototype.processLose = function()
+{
+	if(this.keyPressed(KEY_ACTION))
+		this._reset = true;
+};
+
+Game.prototype.onGuardSeePlayer = function(deltaTime)
+{
+	this._playerDetection += this._playerAttention * DETECTION_RATE * deltaTime;
+	if(this._playerDetection >= DETECTION_LIMIT)
+		this._state = STATE_LOSE;
+}
 
 Game.prototype.processAI = function()
 {
@@ -224,6 +288,8 @@ Game.prototype.renderLoadingScreen = function()
 	if(this._ctx2D !== 'undefined')
 	{
 		this.clearCanvas();
+		this._ctx2D.fillStyle = "white";
+		this._ctx2D.font = "20px Arial";
 		this._ctx2D.fillText("Loading...", 100, 100);
 	}
 	else
@@ -236,24 +302,46 @@ Game.prototype.loop = function()
 {
 	this.processDeltaTime();
 	
-	if(!this.resourcesLoaded())
+	switch(this._state)
 	{
-		this.renderLoadingScreen();
+		case STATE_PLAY :
+		{
+			if(!this.resourcesLoaded())
+			{
+				this.renderLoadingScreen();
+			}
+			else
+			{
+				//Main Loop
+				this.processPlayer();
+				this.processAI();
+				
+				this.preTick(this._deltaTime);
+				
+				this.render();
+				
+				this.postTick(this._deltaTime);
+				
+				this.clockTick();
+			}
+		}
+		break;
+		case STATE_WIN :
+		{
+			this.processWin();
+			this.render();
+			this.renderWin();
+		}
+		break;
+		case STATE_LOSE :
+		{
+			this.processLose();
+			this.render();
+			this.renderLose();
+		}
+		break;
 	}
-	else
-	{
-		//Main Loop
-		this.processPlayerInput();
-		this.processAI();
-		
-		this.preTick(this._deltaTime);
-		
-		this.render();
-		
-		this.postTick(this._deltaTime);
-		
-		this.clockTick();
-	}
+	
 };
 
 Game.prototype.preTick = function(deltaTime)
@@ -279,4 +367,35 @@ Game.prototype.keyUp = function(keyCode)
 Game.prototype.keyPressed = function(keyCode)
 {
 	return this._keysPressed[keyCode];
+};
+
+Game.prototype.isObjective = function(roomRef, gridPos)
+{
+	for(var i = 0; i < this._objectiveRoom.length; i++)
+	{
+		var objectiveRoom = this._map._roomGrid[this._objectiveRoom[i]._y][this._objectiveRoom[i]._x];
+		if(objectiveRoom === roomRef)
+		{
+			if(this._objectiveGrid[i].isEqual(gridPos))
+				return true;
+		}
+	}
+	
+	return false;
+};
+
+Game.prototype.completeObjective = function(roomRef, gridPos)
+{
+	for(var i = 0; i < this._objectiveRoom.length; i++)
+	{
+		var objectiveRoom = this._map._roomGrid[this._objectiveRoom[i]._y][this._objectiveRoom[i]._x];
+		if(objectiveRoom === roomRef)
+		{
+			if(this._objectiveGrid[i].isEqual(gridPos))
+			{
+				this._objectiveRoom.splice(i, 1);
+				this._objectiveGrid.splice(i, 1);
+			}
+		}
+	}
 };

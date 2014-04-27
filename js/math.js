@@ -52,6 +52,11 @@ Vec2.prototype.normalise = function()
 	}
 };
 
+Vec2.prototype.dotProduct = function(otherVec)
+{
+	return (this._x * otherVec._x) + (this._y * otherVec._y);
+};
+
 //Shapes
 function Box(min, max)
 {

@@ -48,6 +48,30 @@ Brain.prototype.process = function(deltaTime)
 };
 
 /**
+	Class: Trigger
+	Really simplistic Event type structure
+*/
+
+function Trigger()
+{
+	this._listeners = new Array();
+};
+
+Trigger.prototype.addListener = function(listener)
+{
+	this._listeners.push(listener);
+};
+
+Trigger.prototype.trigger = function()
+{
+	for(var i = 0; i < this._listeners.length; i++)
+	{
+		this._listeners[i].trigger();
+	}
+	this._listeners.length = 0;
+};
+
+/**
 	Class: WaitTask
 	Wait for X seconds...
 */
@@ -57,7 +81,7 @@ function WaitTask(duration)
 	this._brain = {};
 	this._timer = 0.0;
 	this._duration = duration;
-}
+};
 
 WaitTask.prototype.init = function()
 {
@@ -84,6 +108,65 @@ WaitTask.prototype.process = function()
 }
 
 /**
+	Class: WaitForTriggerTask
+	Wait for a trigger to go...
+*/
+function WaitForTriggerTask(trigger)
+{
+	this._brain = {};
+	this._trigger = trigger;
+	this._ready = false;
+};
+
+WaitForTriggerTask.prototype.init = function()
+{
+	this._trigger.addListener(this);
+	this._ready = false;
+};
+
+WaitForTriggerTask.prototype.trigger = function()
+{
+	this._ready = true;
+};
+
+WaitForTriggerTask.prototype.process = function()
+{	
+	if(this._ready)
+	{			
+		return TASK_COMPLETE;
+	}	
+	else
+	{
+		this._brain._timeToProcess = 0.0;
+		return TASK_CONTINUE;
+	}
+};
+
+/**
+	Class: TriggerTask
+	Call a trigger...
+*/
+function TriggerTask(trigger)
+{
+	this._brain = {};
+	this._trigger = trigger;
+};
+
+TriggerTask.prototype.init = function()
+{
+};
+
+TriggerTask.prototype.trigger = function()
+{
+};
+
+TriggerTask.prototype.process = function()
+{	
+	this._trigger.trigger();
+	return TASK_COMPLETE;
+};
+
+/**
 	Class: FaceTask
 	Face a direction
 */
@@ -101,6 +184,7 @@ FaceTask.prototype.init = function()
 
 FaceTask.prototype.process = function()
 {
+	this._brain._character.tryToStopInteraction();
 	this._brain._character.faceDirection(this._direction);
 	
 	return TASK_COMPLETE;
@@ -349,6 +433,9 @@ InteractTask.prototype.process = function()
 	if(this._timer > this._duration)
 	{
 		this._brain._timeToProcess -= this._duration;
+		if(this._brain._timeToProcess < 0.0)
+			this._brain._timeToProcess = 0.0;
+			
 		return TASK_COMPLETE;
 	}	
 	else

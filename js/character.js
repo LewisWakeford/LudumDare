@@ -12,6 +12,10 @@ var DIRECTION_RIGHT = 1;
 var DIRECTION_UP 	= 2;
 var DIRECTION_DOWN 	= 3;
 
+var HACK_TIME = 3.0;
+
+var GUARD_SIGHTRANGE = 6 * MAP_TILESIZE;
+
 function Character(startRoomPos, startGridPos, characterId)
 {
 	this._currentRoomPos = startRoomPos;
@@ -25,34 +29,49 @@ function Character(startRoomPos, startGridPos, characterId)
 	this._nextMoveDir = -1;
 	this._interacting = false;
 	this._interactTimer = 0.0;
+	
+	var roomRef = gTheGame._map._roomGrid[startRoomPos._y][startRoomPos._x];
+	roomRef.addCharacter(this);
 };
 
 
 Character.prototype.preTick = function(deltaTime)
-{
-	if(this._isMoving)
+{	
+	var timeToMove = deltaTime;
+	
+	while(timeToMove > 0.0)
 	{
-		var toTarget = this._targetPos.diff(this._realPos);
-		var distance = toTarget.mag();
-		var moveThisTick = CHARACTER_SPEED * deltaTime;
+		if(this._isMoving)
+		{
+			var toTarget = this._targetPos.diff(this._realPos);
+			var distance = toTarget.mag();
+			var moveThisTick = CHARACTER_SPEED * deltaTime;
+			
+			if(distance < moveThisTick)
+			{
+				timeToMove -= distance / CHARACTER_SPEED;
+				this._realPos = this._targetPos.clone();
+				this._isMoving = false;
+			}
+			else
+			{
+				timeToMove = 0.0;
+				toTarget.normalise();
+				toTarget.scale(moveThisTick);
+				this._realPos.add(toTarget);
+			}
+		}
 		
-		if(distance < moveThisTick)
+		if(!this._isMoving)
 		{
-			this._realPos = this._targetPos.clone();
-			this._isMoving = false;
+			this.startNewMove(this._nextMoveDir);
+			this._nextMoveDir = -1;
 		}
-		else
-		{
-			toTarget.normalise();
-			toTarget.scale(moveThisTick);
-			this._realPos.add(toTarget);
-		}
+		
+		if(!this._isMoving)
+			timeToMove = 0.0;
 	}
 	
-	if(!this._isMoving)
-	{
-		this.startNewMove(this._nextMoveDir);
-	}
 	
 	if(!this._isMoving)
 	{
@@ -60,6 +79,13 @@ Character.prototype.preTick = function(deltaTime)
 		{
 			this._interactTimer += deltaTime;	
 			this.faceDirection(DIRECTION_UP);
+			
+			if(this._interactTimer >= HACK_TIME)
+			{
+				var roomRef = gTheGame._map._roomGrid[this._currentRoomPos._y][this._currentRoomPos._x];
+				if(gTheGame.isObjective(roomRef, this._gridPos))
+					gTheGame.completeObjective(roomRef, this._gridPos);
+			}
 		}
 	}
 };
@@ -76,11 +102,62 @@ Character.prototype.render = function(context)
 	var posY = this._realPos._y - gTheGame._cameraPos._y - (characterHeight * 0.5);
 	
 	context.drawImage(this._imageRef, clipX, clipY, CHARSHEET_CHAR_WIDTH, CHARSHEET_CHAR_HEIGHT, posX, posY, characterWidth, characterHeight);
+	
+	if(this._interacting)
+	{
+		context.fillStyle = "white";
+		context.font = "15px Arial Bold";
+		var numDots = ((this._interactTimer / HACK_TIME) * 6) % 6;
+		var text = "";
+		while(numDots > 0.0)
+		{
+			text += ".";
+			numDots -= 1.0;
+		}
+		context.fillText(text, posX, posY);
+	}
 };
 
 Character.prototype.postTick = function(deltaTime)
 {
+	if(this._characterId === 1)
+	{
+		if(this.canSeePlayer())
+		{
+			gTheGame.onGuardSeePlayer(deltaTime);
+		}
+	}
+};
+
+Character.prototype.canSeePlayer = function()
+{
+	if(this._currentRoomPos.isEqual(gTheGame._playerCharacter._currentRoomPos))
+	{
+		var toPlayer = gTheGame._playerCharacter._realPos.diff(this._realPos);
+		var faceDir;
+		
+		var distance = toPlayer.mag();
+		
+		if(distance > GUARD_SIGHTRANGE)
+			return false;
+		
+		if(this._animFrame === 2)
+			faceDir = new Vec2(-1, 0);
+		else if(this._animFrame === 1)
+			faceDir = new Vec2(1,0);
+		else if(this._animFrame === 3)
+			faceDir = new Vec2(0, -1);
+		else if(this._animFrame === 0)
+			faceDir = new Vec2(0, 1);
+
+		var dotProduct = faceDir.dotProduct(toPlayer);
+		
+		if(dotProduct >= 0.0)
+			return true;
+			
+	}
 	
+	return false;
 };
 
 Character.prototype.getTargetPos = function()
@@ -169,9 +246,19 @@ Character.prototype.startNewMove = function(direction)
 			this._gridPos = testPos;
 			gTheGame._map.fixupGridPos(this._currentRoomPos, this._gridPos);
 			
+			var oldRoomRef = gTheGame._map._roomGrid[this._currentRoomPos._y][this._currentRoomPos._x];
+			
 			//Javascript you cray cray...
 			this._currentRoomPos = this._currentRoomPos.value.clone();
 			this._gridPos = this._gridPos.value.clone();
+			
+			var newRoomRef = gTheGame._map._roomGrid[this._currentRoomPos._y][this._currentRoomPos._x];
+			
+			if(oldRoomRef !== newRoomRef)
+			{
+				oldRoomRef.removeCharacter(this);
+				newRoomRef.addCharacter(this);
+			}
 			
 			this._targetPos = this.getTargetPos();
 			this._isMoving = true;
